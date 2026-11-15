@@ -11,12 +11,15 @@ Firebase SMS Dashboard Bot — FINAL
 - Admin Gift Access (single user / all users)
 """
 
+
 import os
+import asyncio
+import logging
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import re
 import json
 import time
-import asyncio
-import logging
 import gc
 import random
 from html import escape as html_escape
@@ -39,6 +42,44 @@ from telegram.ext import (
     filters,
     ContextTypes,
 )
+
+
+# ============================================================
+# HEALTH CHECK SERVER
+# ============================================================
+
+class HealthHandler(BaseHTTPRequestHandler):
+
+    def do_GET(self):
+        if self.path in ("/", "/health"):
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.end_headers()
+            self.wfile.write(b"OTP Bot is running!")
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def log_message(self, *args):
+        pass
+
+
+def start_health_server():
+    port = int(os.environ.get("PORT", 10000))
+
+    server = ThreadingHTTPServer(
+        ("0.0.0.0", port),
+        HealthHandler
+    )
+
+    threading.Thread(
+        target=server.serve_forever,
+        daemon=True
+    ).start()
+
+    logger.info("Health server started on port %s", port)
+
+
 
 # ============================================================
 # CONFIG
@@ -3169,6 +3210,7 @@ def main():
 
     app.post_init = _post_init
     app.post_shutdown = _post_stop_with_cleanup
+        start_health_server()
     print("Bot running...")
     app.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
 
