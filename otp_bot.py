@@ -3197,22 +3197,30 @@ def main():
         application.bot_data["device_refresh_task"] = asyncio.create_task(
             _global_device_refresh_loop())
 
+    
     async def _post_stop_with_cleanup(application):
         task = application.bot_data.pop("maintenance_task", None)
         if task and not task.done():
             task.cancel()
             await asyncio.gather(task, return_exceptions=True)
+
         task = application.bot_data.pop("device_refresh_task", None)
         if task and not task.done():
             task.cancel()
             await asyncio.gather(task, return_exceptions=True)
+
         await _post_stop(application)
 
     app.post_init = _post_init
     app.post_shutdown = _post_stop_with_cleanup
-        start_health_server()
+
     print("Bot running...")
-    app.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
+    start_health_server()
+
+    app.run_polling(
+        allowed_updates=Update.ALL_TYPES,
+        drop_pending_updates=True
+    )
 
 
 if __name__ == "__main__":
